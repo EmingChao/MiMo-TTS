@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登录 · MiMo Voice Studio</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%238b5cf6"/><stop offset="1" stop-color="%2306b6d4"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(%23g)"/><g fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 6v12"/><path d="M8 8v8"/><path d="M16 8v8"/><path d="M5 11v2"/><path d="M19 11v2"/></g></svg>'
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="auth-page">
+    <div class="aurora" aria-hidden="true">
+      <div class="aurora__blob aurora__blob--violet"></div>
+      <div class="aurora__blob aurora__blob--cyan"></div>
+      <div class="aurora__blob aurora__blob--pink"></div>
+      <div class="aurora__grid"></div>
+    </div>
+
+    <main class="auth-card">
+      <div class="auth-card__brand">
+        <div class="auth-card__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v18" />
+            <path d="M7 7v10" />
+            <path d="M17 7v10" />
+            <path d="M2 11v2" />
+            <path d="M22 11v2" />
+          </svg>
+        </div>
+        <div>
+          <p class="auth-card__name">MiMo Voice Studio</p>
+          <p class="auth-card__sub">mimo-v2.5-tts-voiceclone</p>
+        </div>
+      </div>
+
+      <h1 class="auth-card__title" id="formTitle">欢迎回来</h1>
+      <p class="auth-card__hint" id="formHint">登录后开始你的语音克隆之旅</p>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab is-active" data-tab="login" role="tab">登录</button>
+        <button type="button" class="auth-tab" data-tab="register" role="tab">注册</button>
+      </div>
+
+      <form id="authForm" class="auth-form" novalidate>
+        <label class="field" for="username">
+          <span class="field__label">用户名</span>
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="3-32 位字母、数字、下划线" required />
+        </label>
+        <label class="field" for="password">
+          <span class="field__label">密码</span>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="至少 4 位" required />
+        </label>
+        <div id="authMessage" class="message" hidden></div>
+        <button id="authSubmit" type="submit" class="btn btn--primary">
+          <span class="btn__label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            <span id="authSubmitText">登录</span>
+          </span>
+          <span class="btn__loader" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        默认账号 <code>tiantian</code> / <code>tiantian</code><br />
+        历史记录与音频按账号隔离，互不干扰
+      </div>
+    </main>
+
+    <script src="/static/login.js"></script>
+  </body>
+</html>

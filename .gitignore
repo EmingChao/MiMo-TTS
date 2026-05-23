@@ -1,0 +1,69 @@
+# ============================================================================
+# MiMo TTS — Git 忽略规则
+# 原则：只保留源码与文档；所有用户数据、密钥、生成产物一律本地保留
+# 注意：.gitignore 不支持行内注释，每条 pattern 必须独占一行
+# ============================================================================
+
+# -------- 用户数据与密钥（绝不上传） --------
+# 含密码 PBKDF2 哈希 + 用户绑定的 API Key
+data/users.json
+# 含登录 session token
+data/tokens.json
+# 含每个用户的合成历史
+data/history.json
+# 用户上传缓存的音色样本
+data/voices/
+data/.DS_Store
+
+# -------- 模型生成产物 --------
+# 每次合成的 wav/mp3 文件按用户名分目录存放
+output/
+
+# -------- 项目根的本地音色样本（自备） --------
+# 这些是测试/默认音色样本，体积大且常涉及版权，请勿入库
+*.wav
+*.mp3
+*.flac
+*.aac
+*.m4a
+
+# -------- 环境变量与密钥文件 --------
+.env
+.env.*
+*.env
+*.key
+*.pem
+secrets.json
+
+# -------- Python 临时产物 --------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# -------- 虚拟环境 --------
+venv/
+.venv/
+env/
+ENV/
+
+# -------- 操作系统/编辑器/IDE --------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
