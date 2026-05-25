@@ -68,9 +68,8 @@ PRESET_VOICES = (
 
 STREAM_SAMPLE_RATE = 24000
 
-# 默认初始化用户（首次启动时若 users.json 不存在则自动创建）
-DEFAULT_USER = "tiantian"
-DEFAULT_PASSWORD = "tiantian"
+# 旧数据迁移用（不再自动创建默认账号）
+_MIGRATE_FALLBACK_USER = "_migrated"
 
 # 密码长度下限
 PASSWORD_MIN_LEN = 4
@@ -502,25 +501,19 @@ def clear_history_records(owner: str) -> int:
 
 
 # ============================================================================
-# 启动迁移：把现有数据归入 tiantian 账号
+# 启动迁移：把旧版本无归属数据归入迁移账号
 # ============================================================================
 
 def migrate_existing_data() -> None:
-    """首次启动时把无 owner 的旧记录归到 tiantian，并把 output/*.wav|*.mp3 移到 output/tiantian/。"""
+    """首次启动时把无 owner 的旧记录归到迁移账号，并把 output/*.wav|*.mp3 移到子目录。"""
     ensure_runtime_dirs()
 
-    # 1. 若 users.json 没有任何用户，则创建默认用户
-    users_data = load_users()
-    if not (users_data.get("users") or {}):
-        print(f"[migrate] 初始化默认账号 {DEFAULT_USER} / {DEFAULT_PASSWORD}")
-        create_user(DEFAULT_USER, DEFAULT_PASSWORD)
-
-    # 2. 历史记录：把无 owner 的归到 DEFAULT_USER，并把 /audio/x.wav 改写为 /audio/<user>/x.wav
+    # 1. 历史记录：把无 owner 的归到迁移账号，并把 /audio/x.wav 改写为 /audio/<user>/x.wav
     records = read_history_all()
     changed = False
     for rec in records:
         if not rec.get("owner"):
-            rec["owner"] = DEFAULT_USER
+            rec["owner"] = _MIGRATE_FALLBACK_USER
             changed = True
         # 旧版本没有 model 字段；统一标记为音色克隆
         if not rec.get("model"):
@@ -529,14 +522,14 @@ def migrate_existing_data() -> None:
         url = str(rec.get("audio_url") or "")
         if url.startswith("/audio/") and "/" not in url.removeprefix("/audio/"):
             file_name = url.removeprefix("/audio/")
-            rec["audio_url"] = f"/audio/{DEFAULT_USER}/{file_name}"
+            rec["audio_url"] = f"/audio/{_MIGRATE_FALLBACK_USER}/{file_name}"
             changed = True
     if changed:
         write_history_all(records)
-        print(f"[migrate] 已将历史记录归属到 {DEFAULT_USER}")
+        print(f"[migrate] 已将历史记录归属到 {_MIGRATE_FALLBACK_USER}")
 
-    # 3. 物理文件：把 output/ 顶层的 wav/mp3 移动到 output/<DEFAULT_USER>/
-    target_dir = OUTPUT_DIR / DEFAULT_USER
+    # 2. 物理文件：把 output/ 顶层的 wav/mp3 移动到 output/<迁移账号>/
+    target_dir = OUTPUT_DIR / _MIGRATE_FALLBACK_USER
     target_dir.mkdir(parents=True, exist_ok=True)
     moved = 0
     for entry in OUTPUT_DIR.iterdir():
