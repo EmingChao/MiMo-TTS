@@ -48,6 +48,26 @@
           <span class="status-pill__dot"></span>
           本地模式
         </span>
+        <!-- API Key 配置按钮 + 弹出层 -->
+        <div class="apikey-popover-wrap" id="apiKeyPopoverWrap">
+          <button id="apiKeyButton" type="button" class="apikey-btn" aria-label="API Key 配置" title="API Key 配置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+            </svg>
+            <span class="apikey-btn__dot" id="apiKeyDot"></span>
+          </button>
+          <div class="apikey-popover" id="apiKeyPopover" hidden>
+            <div class="apikey-popover__head">
+              <span class="apikey-popover__title">API Key</span>
+              <span class="apikey-popover__status" id="apiKeyStatus">检查中…</span>
+            </div>
+            <div class="apikey-popover__row">
+              <input id="apiKey" type="password" placeholder="粘贴 MiMo API Key" autocomplete="off" />
+              <button type="button" id="saveApiKeyButton" class="btn btn--ghost btn--sm">保存</button>
+            </div>
+            <small class="apikey-popover__hint" id="apiKeyHint">保存后绑定到当前账号，不会出现在历史记录里。</small>
+          </div>
+        </div>
         <span class="user-chip" id="userChip" hidden>
           <span class="user-chip__avatar" id="userAvatar">·</span>
           <span class="user-chip__name" id="userName">—</span>
@@ -106,7 +126,7 @@
                 </span>
                 <div class="seg seg--3" role="radiogroup" aria-label="模型类型">
                   <label class="seg__opt">
-                    <input type="radio" name="model" value="preset" />
+                    <input type="radio" name="model" value="preset" checked />
                     <span>预置音色</span>
                   </label>
                   <label class="seg__opt">
@@ -114,7 +134,7 @@
                     <span>音色设计</span>
                   </label>
                   <label class="seg__opt">
-                    <input type="radio" name="model" value="clone" checked />
+                    <input type="radio" name="model" value="clone" />
                     <span>音色克隆</span>
                   </label>
                 </div>
@@ -184,7 +204,7 @@
                     </svg>
                     <div class="dropzone__text">
                       <p class="dropzone__main" id="voiceDropzoneText">点击上传 / 拖拽 WAV / MP3</p>
-                      <p class="dropzone__hint">默认使用本地「诺艾尔.wav」</p>
+                      <p class="dropzone__hint">上传音频样本以复刻音色</p>
                     </div>
                   </div>
                 </label>
@@ -222,28 +242,6 @@
                 </label>
               </div>
 
-              <details class="advanced" id="advancedSettings">
-                <summary class="advanced__summary">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-                  </svg>
-                  <span>API Key</span>
-                  <span class="advanced__status" id="apiKeyStatus">检查中…</span>
-                </summary>
-                <div class="api-key-row">
-                  <input id="apiKey" type="password" placeholder="粘贴 MiMo API Key（保存后绑定到当前账号）" autocomplete="off" />
-                  <button type="button" id="saveApiKeyButton" class="btn btn--ghost btn--sm">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                      <polyline points="17 21 17 13 7 13 7 21" />
-                      <polyline points="7 3 7 8 15 8" />
-                    </svg>
-                    保存
-                  </button>
-                </div>
-                <small class="field__small" id="apiKeyHint">已保存的 Key 仅本账号可用，不会出现在历史记录里。</small>
-              </details>
             </div>
           </div>
 
@@ -295,7 +293,22 @@
               下载
             </a>
           </div>
-          <audio id="resultAudio" controls preload="auto"></audio>
+          <audio id="resultAudio" preload="auto"></audio>
+          <div class="player" id="resultPlayer" hidden>
+            <button class="player__play" type="button" aria-label="播放">
+              <svg class="player__icon-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <svg class="player__icon-pause" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
+            </button>
+            <span class="player__time player__time--cur">0:00</span>
+            <div class="player__track"><div class="player__fill"></div><div class="player__thumb"></div></div>
+            <span class="player__time player__time--dur">0:00</span>
+            <div class="player__vol">
+              <button class="player__mute" type="button" aria-label="静音">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path class="vol-wave1" d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path class="vol-wave2" d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              </button>
+              <div class="player__vol-track"><div class="player__vol-fill"></div></div>
+            </div>
+          </div>
           <p class="result__text" id="resultText"></p>
         </section>
       </section>

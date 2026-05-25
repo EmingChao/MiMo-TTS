@@ -43,7 +43,7 @@ OUTPUT_DIR = ROOT_DIR / "output"
 HISTORY_FILE = DATA_DIR / "history.json"
 USERS_FILE = DATA_DIR / "users.json"
 TOKENS_FILE = DATA_DIR / "tokens.json"
-DEFAULT_VOICE_FILE = ROOT_DIR / "诺艾尔.wav"
+DEFAULT_VOICE_FILE = None
 
 API_URL = "https://api.xiaomimimo.com/v1/chat/completions"
 
@@ -792,10 +792,10 @@ def generate_audio(
 
 
 def save_uploaded_voice(form: dict[str, FormPart]) -> tuple[Path, str]:
-    """保存上传音色；如果未上传则返回默认音色。"""
+    """保存上传音色；如果未上传则抛出错误。"""
     voice_part = form.get("voice")
     if voice_part is None or not voice_part.filename:
-        return DEFAULT_VOICE_FILE, DEFAULT_VOICE_FILE.name
+        raise ValueError("音色克隆模式需要上传音频样本。")
 
     original_name = safe_original_name(voice_part.filename)
     suffix = Path(original_name).suffix.lower()
@@ -930,7 +930,7 @@ class MimoRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def serve_audio(self, rel_path: str, head_only: bool = False) -> None:
-        """输出本地生成的音频文件；校验 token 与文件归属。"""
+        """输出本地生成的音频文件；校验 token 与文件归属，支持 Range 请求。"""
         # 验证登录态（token 可从 Authorization 头或 ?token= 取）
         username = authenticate_request(self)
         if not username:
@@ -954,14 +954,49 @@ class MimoRequestHandler(BaseHTTPRequestHandler):
             json_response(self, HTTPStatus.NOT_FOUND, {"error": "音频文件不存在。"})
             return
 
-        body = audio_path.read_bytes()
-        self.send_response(HTTPStatus.OK)
+        file_size = audio_path.stat().st_size
         content_type = "audio/mpeg" if audio_path.suffix.lower() == ".mp3" else "audio/wav"
+
+        # 解析 Range 头
+        range_header = self.headers.get("Range")
+        if range_header and range_header.startswith("bytes="):
+            try:
+                range_spec = range_header[6:]
+                start_str, end_str = range_spec.split("-", 1)
+                start = int(start_str) if start_str else 0
+                end = int(end_str) if end_str else file_size - 1
+                start = max(0, min(start, file_size - 1))
+                end = max(start, min(end, file_size - 1))
+                length = end - start + 1
+
+                self.send_response(HTTPStatus.PARTIAL_CONTENT)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                self.send_header("Content-Length", str(length))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                if not head_only:
+                    with open(audio_path, "rb") as f:
+                        f.seek(start)
+                        self.wfile.write(f.read(length))
+            except (ValueError, OSError):
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{file_size}")
+                self.end_headers()
+            return
+
+        self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(file_size))
+        self.send_header("Accept-Ranges", "bytes")
         self.end_headers()
         if not head_only:
-            self.wfile.write(body)
+            with open(audio_path, "rb") as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
 
     # ---------------- 认证 API ----------------
 
@@ -1106,7 +1141,7 @@ class MimoRequestHandler(BaseHTTPRequestHandler):
             if model_key not in MODEL_ID_BY_KEY:
                 raise ValueError("未知的模型类型。")
             if not api_key:
-                raise ValueError("缺少 API Key，请先在「高级设置」里保存你的 API Key。")
+                raise ValueError("缺少 API Key，请先点击右上角钥匙图标保存你的 API Key。")
 
             voice_path: Path | None = None
             if model_key == "clone":
@@ -1141,7 +1176,6 @@ class MimoRequestHandler(BaseHTTPRequestHandler):
             json_response(self, HTTPStatus.OK, {"record": record})
         except Exception as error:
             record["error"] = normalize_api_error(error)
-            append_history(record)
             json_response(self, HTTPStatus.BAD_REQUEST, {"record": record, "error": record["error"]})
 
     def log_message(self, format: str, *args: object) -> None:

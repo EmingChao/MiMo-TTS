@@ -105,12 +105,14 @@ const instructionOptional = document.querySelector("#instructionOptional");
 const instructionHint = document.querySelector("#instructionHint");
 const optimizeText = document.querySelector("#optimizeText");
 
-// API Key 区
+// API Key 区（topbar 弹出层）
 const apiKeyStatus = document.querySelector("#apiKeyStatus");
 const apiKeyInput = document.querySelector("#apiKey");
 const saveApiKeyButton = document.querySelector("#saveApiKeyButton");
 const apiKeyHint = document.querySelector("#apiKeyHint");
-const advancedSettings = document.querySelector("#advancedSettings");
+const apiKeyButton = document.querySelector("#apiKeyButton");
+const apiKeyPopover = document.querySelector("#apiKeyPopover");
+const apiKeyDot = document.querySelector("#apiKeyDot");
 
 // 用户信息条
 const userChip = document.querySelector("#userChip");
@@ -156,6 +158,7 @@ const INSTRUCTION_PRESETS = {
 // 最新结果区元素
 const latestResult = document.querySelector("#latestResult");
 const resultAudio = document.querySelector("#resultAudio");
+const resultPlayer = document.querySelector("#resultPlayer");
 const resultDownload = document.querySelector("#resultDownload");
 const resultMeta = document.querySelector("#resultMeta");
 const resultText = document.querySelector("#resultText");
@@ -203,6 +206,104 @@ function modelText(model) {
   if (model === "preset") return "预置音色";
   if (model === "design") return "音色设计";
   return "音色克隆";
+}
+
+// ------------------------------------------------------------------
+// 自定义播放器绑定
+// ------------------------------------------------------------------
+function fmtTime(s) {
+  if (!s || !isFinite(s)) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec < 10 ? "0" : ""}${sec}`;
+}
+
+function bindPlayer(playerEl, audioEl) {
+  if (!playerEl || !audioEl || playerEl.dataset.bound) return;
+  playerEl.dataset.bound = "1";
+  playerEl.hidden = false;
+
+  const btnPlay = playerEl.querySelector(".player__play");
+  const iconPlay = playerEl.querySelector(".player__icon-play");
+  const iconPause = playerEl.querySelector(".player__icon-pause");
+  const timeCur = playerEl.querySelector(".player__time--cur");
+  const timeDur = playerEl.querySelector(".player__time--dur");
+  const track = playerEl.querySelector(".player__track");
+  const fill = playerEl.querySelector(".player__fill");
+  const thumb = playerEl.querySelector(".player__thumb");
+  const muteBtn = playerEl.querySelector(".player__mute");
+  const volTrack = playerEl.querySelector(".player__vol-track");
+  const volFill = playerEl.querySelector(".player__vol-fill");
+
+  function showPlaying(v) {
+    iconPlay.hidden = v;
+    iconPause.hidden = !v;
+  }
+
+  btnPlay.addEventListener("click", () => {
+    if (audioEl.paused) { audioEl.play(); } else { audioEl.pause(); }
+  });
+
+  audioEl.addEventListener("play", () => showPlaying(true));
+  audioEl.addEventListener("pause", () => showPlaying(false));
+  audioEl.addEventListener("ended", () => { showPlaying(false); fill.style.width = "0%"; thumb.style.left = "0%"; });
+
+  audioEl.addEventListener("timeupdate", () => {
+    if (!audioEl.duration || !isFinite(audioEl.duration)) return;
+    const pct = (audioEl.currentTime / audioEl.duration) * 100;
+    fill.style.width = pct + "%";
+    thumb.style.left = pct + "%";
+    timeCur.textContent = fmtTime(audioEl.currentTime);
+  });
+
+  audioEl.addEventListener("loadedmetadata", () => {
+    timeDur.textContent = fmtTime(audioEl.duration);
+  });
+
+  // 若浏览器直接给了 duration（缓存命中）
+  if (audioEl.duration && isFinite(audioEl.duration)) {
+    timeDur.textContent = fmtTime(audioEl.duration);
+  }
+
+  // 进度条点击
+  track.addEventListener("click", (e) => {
+    if (!audioEl.duration || !isFinite(audioEl.duration)) return;
+    const rect = track.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audioEl.currentTime = pct * audioEl.duration;
+  });
+
+  // 音量
+  if (muteBtn) {
+    audioEl.volume = 1;
+    muteBtn.addEventListener("click", () => {
+      audioEl.muted = !audioEl.muted;
+      muteBtn.classList.toggle("is-muted", audioEl.muted);
+      if (volFill) volFill.style.width = audioEl.muted ? "0%" : (audioEl.volume * 100) + "%";
+    });
+  }
+  if (volTrack) {
+    volTrack.addEventListener("click", (e) => {
+      const rect = volTrack.getBoundingClientRect();
+      const v = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      audioEl.volume = v;
+      audioEl.muted = v === 0;
+      volFill.style.width = (v * 100) + "%";
+      if (muteBtn) muteBtn.classList.toggle("is-muted", v === 0);
+    });
+  }
+}
+
+function bindAllPlayers() {
+  document.querySelectorAll(".player[data-src]").forEach((el) => {
+    const src = el.dataset.src;
+    // 同级 audio 元素
+    const audioEl = el.previousElementSibling;
+    if (audioEl && audioEl.tagName === "AUDIO") {
+      audioEl.src = src;
+      bindPlayer(el, audioEl);
+    }
+  });
 }
 
 // ------------------------------------------------------------------
@@ -272,7 +373,7 @@ function bindDropzone() {
 // ------------------------------------------------------------------
 function getSelectedModel() {
   const checked = Array.from(modelRadios).find((r) => r.checked);
-  return (checked && checked.value) || "clone";
+  return (checked && checked.value) || "preset";
 }
 
 function renderPresetVoices() {
@@ -340,18 +441,16 @@ function bindModelSwitch() {
 function renderApiKeyStatus(hasKey, masked) {
   if (hasKey) {
     apiKeyStatus.textContent = `已保存 ${masked || ""}`.trim();
-    apiKeyStatus.className = "advanced__status is-saved";
-    apiKeyInput.placeholder = "留空保留原 Key；输入新值并点保存可替换";
+    apiKeyStatus.className = "apikey-popover__status is-saved";
+    apiKeyDot.className = "apikey-btn__dot is-saved";
+    apiKeyInput.placeholder = "留空保留原 Key；输入新值可替换";
     apiKeyHint.textContent = "已保存的 Key 仅本账号可用，不会出现在历史记录里。";
   } else {
     apiKeyStatus.textContent = "未配置";
-    apiKeyStatus.className = "advanced__status is-missing";
+    apiKeyStatus.className = "apikey-popover__status is-missing";
+    apiKeyDot.className = "apikey-btn__dot is-missing";
     apiKeyInput.placeholder = "粘贴 MiMo API Key（保存后绑定到当前账号）";
     apiKeyHint.textContent = "首次使用请先粘贴你的 MiMo API Key 并保存，之后无需重复配置。";
-    // 自动展开提示用户配置
-    if (advancedSettings) {
-      advancedSettings.open = true;
-    }
   }
 }
 
@@ -362,7 +461,7 @@ async function loadApiKeyStatus() {
     renderApiKeyStatus(!!data.has_api_key, data.masked_api_key || "");
   } catch (error) {
     apiKeyStatus.textContent = "读取失败";
-    apiKeyStatus.className = "advanced__status is-missing";
+    apiKeyStatus.className = "apikey-popover__status is-missing";
   }
 }
 
@@ -404,7 +503,16 @@ function renderRecord(record) {
   const isSuccess = record.status === "success";
   const tokenized = urlWithToken(record.audio_url || "");
   const audio = isSuccess
-    ? `<audio controls preload="none" src="${escapeHtml(tokenized)}"></audio>
+    ? `<audio preload="metadata"></audio>
+       <div class="player" data-src="${escapeHtml(tokenized)}">
+         <button class="player__play" type="button" aria-label="播放">
+           <svg class="player__icon-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+           <svg class="player__icon-pause" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
+         </button>
+         <span class="player__time player__time--cur">0:00</span>
+         <div class="player__track"><div class="player__fill"></div><div class="player__thumb"></div></div>
+         <span class="player__time player__time--dur">0:00</span>
+       </div>
        <a class="download" href="${escapeHtml(tokenized)}" download="${escapeHtml(record.file_name)}">下载</a>`
     : `<p class="error-text">${escapeHtml(record.error || "生成失败")}</p>`;
 
@@ -451,6 +559,7 @@ async function loadHistory() {
     historyList.innerHTML = records.length
       ? records.map(renderRecord).join("")
       : `<div class="empty">还没有生成记录，先来合成第一段语音吧 ✨</div>`;
+    bindAllPlayers();
     return records;
   } catch (error) {
     showMessage(`加载历史失败：${error.message}`, "error");
@@ -485,7 +594,9 @@ function showLatestSuccess(record) {
 
   const tokenized = urlWithToken(record.audio_url || "");
   resultAudio.src = tokenized;
-  resultAudio.hidden = false;
+  // 重置并绑定自定义播放器
+  delete resultPlayer.dataset.bound;
+  bindPlayer(resultPlayer, resultAudio);
   resultDownload.hidden = false;
   resultDownload.href = tokenized;
   resultDownload.download = record.file_name || "";
@@ -516,7 +627,7 @@ function showLatestFailure(errorText, record) {
   resultMeta.textContent = meta;
 
   resultAudio.removeAttribute("src");
-  resultAudio.hidden = true;
+  resultPlayer.hidden = true;
   resultDownload.hidden = true;
 
   resultText.textContent = errorText || "生成失败";
@@ -741,6 +852,17 @@ initHistoryState();
 // 渲染预置音色 + 绑定模型切换
 renderPresetVoices();
 bindModelSwitch();
+
+// API Key popover 开关
+apiKeyButton.addEventListener("click", (e) => {
+  e.stopPropagation();
+  apiKeyPopover.hidden = !apiKeyPopover.hidden;
+});
+document.addEventListener("click", (e) => {
+  if (!apiKeyPopover.hidden && !apiKeyPopover.contains(e.target) && e.target !== apiKeyButton) {
+    apiKeyPopover.hidden = true;
+  }
+});
 
 // API Key 保存按钮
 saveApiKeyButton.addEventListener("click", () => {
